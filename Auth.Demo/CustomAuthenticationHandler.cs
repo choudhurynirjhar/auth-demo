@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Principal;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 
@@ -71,11 +72,12 @@ namespace Auth.Demo
             }
             var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, validatedToken.Value),
+                    new Claim(ClaimTypes.Name, validatedToken.Value.Item1),
+                    new Claim(ClaimTypes.Role, validatedToken.Value.Item2)
                 };
 
             var identity = new ClaimsIdentity(claims, Scheme.Name);
-            var principal = new System.Security.Principal.GenericPrincipal(identity, null);
+            var principal = new GenericPrincipal(identity, new[] { validatedToken.Value.Item2 });
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
             return AuthenticateResult.Success(ticket);
         }

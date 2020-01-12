@@ -8,31 +8,33 @@ namespace Auth.Demo
     {
         string Authenticate(string username, string password);
 
-        IDictionary<string, string> Tokens { get; }
+        IDictionary<string, Tuple<string,string>> Tokens { get; }
     }
 
     public class CustomAuthenticationManager : ICustomAuthenticationManager
     {
-        private readonly IDictionary<string, string> users = new Dictionary<string, string>
+        private readonly IList<User> users = new List<User>
         {
-            { "test1", "password1" },
-            { "test2", "password2" }
+            new User { Username= "test1", Password= "password1", Role = "Administrator" },
+            new User { Username = "test2",Password= "password2", Role = "User" }
         };
 
-        private readonly IDictionary<string, string> tokens = new Dictionary<string, string>();
+        private readonly IDictionary<string, Tuple<string, string>> tokens = 
+            new Dictionary<string, Tuple<string, string>>();
 
-        public IDictionary<string, string> Tokens => tokens;
+        public IDictionary<string, Tuple<string, string>> Tokens => tokens;
 
         public string Authenticate(string username, string password)
         {
-            if (!users.Any(u => u.Key == username && u.Value == password))
+            if (!users.Any(u => u.Username == username && u.Password == password))
             {
                 return null;
             }
 
             var token = Guid.NewGuid().ToString();
 
-            tokens.Add(token, username);
+            tokens.Add(token, new Tuple<string, string>(username,
+                users.First(u => u.Username == username && u.Password == password).Role));
 
             return token;
         }

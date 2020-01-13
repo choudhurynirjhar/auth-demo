@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
-
-namespace Auth.Demo
+﻿namespace Auth.Demo
 {
- 
+
 }

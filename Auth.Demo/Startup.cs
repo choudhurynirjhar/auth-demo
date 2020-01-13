@@ -1,11 +1,10 @@
 using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Auth.Demo
 {
@@ -27,7 +26,17 @@ namespace Auth.Demo
 
             services.AddAuthentication("Basic")
                 .AddScheme<BasicAuthenticationOptions, CustomAuthenticationHandler>("Basic", null);
-            
+
+            services.AddAuthorization(options => 
+            {
+                options.AddPolicy("AdminAndPoweruser",
+                    policy => policy.RequireRole("Administrator", "Poweruser"));
+                options.AddPolicy("EmployeeMoreThan20Years",
+                    policy => policy.Requirements.Add(new EmployeeWithMoreYearsRequirement(20)));
+            });
+
+            services.AddSingleton<IAuthorizationHandler, EmployeeWithMoreYearsHandler>();
+            services.AddSingleton<IEmployeeNumberOfYearsProvider, EmployeeNumberOfYearsProvider>();
             services.AddSingleton<ICustomAuthenticationManager, CustomAuthenticationManager>();
         }
 

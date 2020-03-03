@@ -9,11 +9,13 @@ namespace Auth.Demo.Controllers
     [ApiController]
     public class NameController : ControllerBase
     {
-        private readonly ICustomAuthenticationManager customAuthenticationManager;
+        private readonly IJWTAuthenticationManager jWTAuthenticationManager;
+        private readonly ITokenRefresher tokenRefresher;
 
-        public NameController(ICustomAuthenticationManager customAuthenticationManager)
+        public NameController(IJWTAuthenticationManager jWTAuthenticationManager, ITokenRefresher tokenRefresher)
         {
-            this.customAuthenticationManager = customAuthenticationManager;
+            this.jWTAuthenticationManager = jWTAuthenticationManager;
+            this.tokenRefresher = tokenRefresher;
         }
 
         // GET: api/Name
@@ -34,11 +36,23 @@ namespace Auth.Demo.Controllers
         [HttpPost("authenticate")]
         public IActionResult Authenticate([FromBody] UserCred userCred)
         {
-            var token = customAuthenticationManager.Authenticate(userCred.Username, userCred.Password);
+            var token = jWTAuthenticationManager.Authenticate(userCred.Username, userCred.Password);
             
             if (token == null) 
                 return Unauthorized();
             
+            return Ok(token);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("refresh")]
+        public IActionResult Refresh([FromBody] RefreshCred refreshCred)
+        {
+            var token = tokenRefresher.Refresh(refreshCred);
+
+            if (token == null)
+                return Unauthorized();
+
             return Ok(token);
         }
     }

@@ -10,7 +10,9 @@ namespace Auth.Demo
 {
     public interface IJWTAuthenticationManager
     {
-        string Authenticate(string username, string password);
+        AuthenticationResponse Authenticate(string username, string password);
+        IDictionary<string, string> UsersRefreshTokens { get; set; }
+        AuthenticationResponse Authenticate(string username, Claim[] claims);
     }
 
     public class JWTAuthenticationManager : IJWTAuthenticationManager
@@ -21,14 +23,49 @@ namespace Auth.Demo
             { "test2", "password2" }
         };
 
-        private readonly string tokenKey;
+        public IDictionary<string, string> UsersRefreshTokens { get; set; }
 
-        public JWTAuthenticationManager(string tokenKey)
+        private readonly string tokenKey;
+        private readonly IRefreshTokenGenerator refreshTokenGenerator;
+
+        public JWTAuthenticationManager(string tokenKey, IRefreshTokenGenerator refreshTokenGenerator)
         {
             this.tokenKey = tokenKey;
+            this.refreshTokenGenerator = refreshTokenGenerator;
+            UsersRefreshTokens = new Dictionary<string, string>();
         }
 
-        public string Authenticate(string username, string password)
+        public AuthenticationResponse Authenticate(string username, Claim[] claims)
+        {
+            var key = Encoding.ASCII.GetBytes(tokenKey);
+            var jwtSecurityToken = new JwtSecurityToken(
+                    claims: claims,
+                    expires: DateTime.UtcNow.AddHours(1),
+                    signingCredentials: new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
+                );
+
+            var token =new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
+            var refreshToken = refreshTokenGenerator.GenerateToken();
+
+            if (UsersRefreshTokens.ContainsKey(username))
+            {
+                UsersRefreshTokens[username] = refreshToken;
+            }
+            else
+            {
+                UsersRefreshTokens.Add(username, refreshToken);
+            }
+
+            return new AuthenticationResponse
+            {
+                JwtToken = token,
+                RefreshToken = refreshToken
+            };
+        }
+
+        public AuthenticationResponse Authenticate(string username, string password)
         {
             if (!users.Any(u => u.Key == username && u.Value == password))
             {
@@ -48,8 +85,24 @@ namespace Auth.Demo
                     new SymmetricSecurityKey(key),
                     SecurityAlgorithms.HmacSha256Signature)
             };
+
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            var refreshToken = refreshTokenGenerator.GenerateToken();
+
+            if (UsersRefreshTokens.ContainsKey(username))
+            {
+                UsersRefreshTokens[username] = refreshToken;
+            }
+            else
+            {
+                UsersRefreshTokens.Add(username, refreshToken);
+            }
+
+            return new AuthenticationResponse
+            {
+                JwtToken = tokenHandler.WriteToken(token),
+                RefreshToken = refreshToken
+            };
         }
     }
 }

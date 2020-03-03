@@ -6,10 +6,10 @@ namespace Auth.Demo.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class InventoryController : ControllerBase
     {
         // GET: api/Inventory
-        [Authorize(Roles = "Administrator, User")]
         [HttpGet]
         public IEnumerable<string> Get()
         {
@@ -17,7 +17,6 @@ namespace Auth.Demo.Controllers
         }
 
         // POST: api/Inventory
-        [Authorize(Policy = "EmployeeMoreThan20Years")]
         [HttpPost]
         public void Post([FromBody] Inventory value)
         {

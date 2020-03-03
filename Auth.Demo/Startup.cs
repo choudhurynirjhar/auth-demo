@@ -1,10 +1,12 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Auth.Demo
 {
@@ -24,20 +26,29 @@ namespace Auth.Demo
             var tokenKey = Configuration.GetValue<string>("TokenKey");
             var key = Encoding.ASCII.GetBytes(tokenKey);
 
-            services.AddAuthentication("Basic")
-                .AddScheme<BasicAuthenticationOptions, CustomAuthenticationHandler>("Basic", null);
-
-            services.AddAuthorization(options => 
+            services.AddAuthentication(x =>
             {
-                options.AddPolicy("AdminAndPoweruser",
-                    policy => policy.RequireRole("Administrator", "Poweruser"));
-                options.AddPolicy("EmployeeMoreThan20Years",
-                    policy => policy.Requirements.Add(new EmployeeWithMoreYearsRequirement(20)));
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(x =>
+            {
+                x.RequireHttpsMetadata = false;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false
+                };
             });
 
-            services.AddSingleton<IAuthorizationHandler, EmployeeWithMoreYearsHandler>();
-            services.AddSingleton<IEmployeeNumberOfYearsProvider, EmployeeNumberOfYearsProvider>();
-            services.AddSingleton<ICustomAuthenticationManager, CustomAuthenticationManager>();
+            services.AddSingleton<ITokenRefresher>(x => 
+                new TokenRefresher(key, x.GetService<IJWTAuthenticationManager>()));
+            services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
+            services.AddSingleton<IJWTAuthenticationManager>(x => 
+                new JWTAuthenticationManager(tokenKey, x.GetService<IRefreshTokenGenerator>()));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

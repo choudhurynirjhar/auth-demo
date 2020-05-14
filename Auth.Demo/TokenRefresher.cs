@@ -29,7 +29,8 @@ namespace Auth.Demo
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),
                     ValidateIssuer = false,
-                    ValidateAudience = false
+                    ValidateAudience = false,
+                    ValidateLifetime = false //here we are saying that we don't care about the token's expiration date
                 }, out validatedToken);
             var jwtToken = validatedToken as JwtSecurityToken;
             if(jwtToken == null || !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
